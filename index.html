@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro de Productos</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 10px;
+      background: #f1f1f1;
+      max-width: 600px;
+      margin: auto;
+    }
+    h2 {
+      text-align: center;
+      margin-top: 10px;
+    }
+    input, button {
+      margin: 5px 0;
+      padding: 10px;
+      font-size: 1em;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      margin-top: 10px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+    #reader {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📦 Registro de Productos Escaneados</h2>
+
+  <div id="reader"></div>
+  <p><strong>Último código:</strong> <span id="lastCode">-</span></p>
+
+  <input type="number" id="cantidad" placeholder="Cantidad">
+  <input type="text" id="lote" placeholder="Lote">
+  <input type="date" id="fecha">
+
+  <button onclick="descargarExcel()">📥 Descargar Excel</button>
+
+  <table id="tabla">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Cantidad</th>
+        <th>Lote</th>
+        <th>Fecha</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    let scanner;
+    let codigoActual = "";
+
+    function iniciarScanner() {
+      scanner = new Html5Qrcode("reader");
+      scanner.start({ facingMode: "environment" }, {
+        fps: 10,
+        qrbox: 250
+      }, (code) => {
+        codigoActual = code;
+        document.getElementById("lastCode").innerText = code;
+        agregarRegistroAuto();
+        scanner.stop().then(() => {
+          iniciarScanner(); // reinicia cámara después de escanear
+        }).catch((err) => {
+          console.error("No se pudo reiniciar el escáner:", err);
+        });
+      }, (error) => {
+        // Error menor ignorado
+      }).catch(err => {
+        alert("⚠️ Error al acceder a la cámara: " + err);
+      });
+    }
+
+    function agregarRegistroAuto() {
+      const cantidad = document.getElementById("cantidad").value;
+      const lote = document.getElementById("lote").value;
+      const fecha = document.getElementById("fecha").value;
+
+      if (!cantidad || !lote || !fecha) {
+        alert("Faltan datos (cantidad, lote o fecha).");
+        return;
+      }
+
+      const fila = `<tr><td>${codigoActual}</td><td>${cantidad}</td><td>${lote}</td><td>${fecha}</td></tr>`;
+      document.querySelector("#tabla tbody").insertAdjacentHTML("beforeend", fila);
+
+      // Limpiar campos
+      document.getElementById("cantidad").value = "";
+      document.getElementById("lote").value = "";
+      document.getElementById("fecha").value = "";
+      codigoActual = "";
+      document.getElementById("lastCode").innerText = "-";
+    }
+
+    function descargarExcel() {
+      const tabla = document.getElementById("tabla");
+      const wb = XLSX.utils.table_to_book(tabla, {sheet: "Registros"});
+      XLSX.writeFile(wb, "registros_productos.xlsx");
+    }
+
+    window.onload = () => {
+      iniciarScanner();
+    };
+  </script>
+
+</body>
+</html>
